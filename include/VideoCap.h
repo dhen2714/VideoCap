@@ -1,10 +1,17 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
+/*
+VidoeCapture class to grab frames from a USB camera.
+To initialize a VideoCapture object:
+    vc = VideoCapture()
+To grab a frame, call vc.read(). To release capture, vc.release().
+*/
 
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cassert>
+
+extern "C" {
 #include <getopt.h>
-
 // Low level i/o
 #include <fcntl.h>
 #include <unistd.h>
@@ -16,8 +23,8 @@
 #include <sys/ioctl.h>
 
 #include <linux/videodev2.h>
+}
 
-// C++ headers
 #include <iostream>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
@@ -37,13 +44,14 @@ enum io_method {
 };
 
 class VideoCapture{
+private:
     const char *dev_name;
     const enum io_method io = IO_METHOD_MMAP;
     int fd = -1;
     buffer *buffers;
     unsigned int n_buffers;
     int out_buf;
-    int force_format = 1;
+    int force_format = 1; // If set != 0, img format specified in init_device()
     int frame_count = 200;
     unsigned int frame_number = 0;
 
@@ -55,7 +63,7 @@ class VideoCapture{
     void init_mmap();
     void start_capturing();
     int read_frame();
-    void process_image(const void *p, int size);
+    void process_image(void *p, int size);
     void stop_capturing();
     void uninit_device();
     void close_device();
@@ -65,5 +73,4 @@ public:
 
     void mainloop();
     void release();
-
 };

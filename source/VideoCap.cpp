@@ -106,7 +106,7 @@ void VideoCapture::init_device()
     }
 
     CLEAR(fmt);
-
+    // The settings below are for a 640x480 laptop webcame.
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     std::cout << "FORCE FORMAT: " << force_format << std::endl;
     if (force_format) {
@@ -217,16 +217,19 @@ void VideoCapture::start_capturing()
 void VideoCapture::mainloop()
 {
     for (;;) {
-        fd_set fds;
+        fd_set fds; // Bit string of file descriptors.
         struct timeval tv;
         int r;
 
-        FD_ZERO(&fds);
-        FD_SET(fd, &fds);
+        FD_ZERO(&fds); // Initializes file descriptor set &fds to be zero.
+        FD_SET(fd, &fds); // Sets bit for file descriptor fd in &fds.
 
         tv.tv_sec = 2;
         tv.tv_usec = 0;
 
+        /* The select() function indicates which of the specified file
+        descriptors is ready for reading, ready for writing, or  has an error
+        condition pending. */
         r = select(fd + 1, &fds, NULL, NULL, &tv);
 
         if (r == -1) {
@@ -271,7 +274,7 @@ int VideoCapture::read_frame()
     return 1;
 }
 
-void VideoCapture::process_image(const void *p, int size)
+void VideoCapture::process_image(void *p, int size)
 {
     char filename[15];
     int frame_number = 0;
@@ -283,16 +286,12 @@ void VideoCapture::process_image(const void *p, int size)
 
     fflush(fp);
     fclose(fp);
-    /*
-    std::cout << "WRITING FILE" << std::endl;
 
-    int jpgfile;
-    if((jpgfile = open("myimage.jpeg", O_WRONLY | O_CREAT, 0660)) < 0){
-        perror("open");
-        exit(1);
-    }
+    int bitSize = size*8;
+    cv::Mat rawData(1, bitSize, CV_8UC1, p);
+    cv::Mat decodedImage = cv::imdecode(rawData, 1);
+    cv::imwrite("TEST_CV.jpg", decodedImage);
+    if (decodedImage.data == NULL)
+        std::cout << "DECODING ERROR" << std::endl;
 
-    write(jpgfile, p, size);
-    close(jpgfile);
-    */
 }
