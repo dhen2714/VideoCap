@@ -4,6 +4,8 @@ To initialize a VideoCapture object:
     vc = VideoCapture()
 To grab a frame, call vc.read(). To release capture, vc.release().
 */
+#ifndef VIDEO_CAP_H
+#define VIDEO_CAP_H
 
 #include <cstdio>
 #include <cstdlib>
@@ -26,8 +28,13 @@ extern "C" {
 }
 
 #include <iostream>
+#include <thread>
+#include <atomic>
+#include <mutex>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
+#include <gtkmm-3.0/gtkmm.h>
+#include <gdk/gdk.h>
 
 #define CLEAR(x) memset(&(x), 0, sizeof(x))
 
@@ -62,8 +69,7 @@ private:
     void init_device();
     void init_mmap();
     void start_capturing();
-    int read_frame();
-    void process_image(void *p, int size);
+    int process_frame(cv::Mat *frame);
     void stop_capturing();
     void uninit_device();
     void close_device();
@@ -71,6 +77,37 @@ private:
 public:
     VideoCapture();
 
-    void mainloop();
+    int read(cv::Mat *frame);
     void release();
 };
+
+class Interface : public Gtk::Window
+{
+private:
+    void on_button_clicked();
+    Gtk::Button start;
+
+public:
+    Interface();
+    virtual ~Interface();
+};
+
+class CaptureApplication
+{
+private:
+    VideoCapture vc;
+    //Interface gui;
+    std::thread captureThread;
+    std::thread guiThread;
+    std::atomic_bool writeImg;
+    cv::Mat frame = cv::Mat(480, 1280, CV_8U);
+
+    void run_capture();
+    void run_interface();
+
+public:
+    CaptureApplication();
+    ~CaptureApplication();
+};
+
+#endif // VIDEO_CAP_H

@@ -1,4 +1,4 @@
-#include <VideoCap.h>
+#include <VideoCap.hpp>
 
 
 VideoCapture::VideoCapture()
@@ -12,6 +12,7 @@ VideoCapture::VideoCapture()
 
 void VideoCapture::release()
 {
+    cv::destroyAllWindows();
     uninit_device();
     close_device();
 }
@@ -106,14 +107,14 @@ void VideoCapture::init_device()
     }
 
     CLEAR(fmt);
-    // The settings below are for a 640x480 laptop webcame.
+    // The settings below are for a LI OV-580 OV7251 stereo camera.
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     std::cout << "FORCE FORMAT: " << force_format << std::endl;
     if (force_format) {
         fprintf(stderr, "SET OV580\r\n");
-        fmt.fmt.pix.width = 640;
+        fmt.fmt.pix.width = 1280;
         fmt.fmt.pix.height = 480;
-        fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_MJPEG;
+        fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_GREY;
         fmt.fmt.pix.field = V4L2_FIELD_ANY;
 
         if (xioctl(fd, VIDIOC_S_FMT, &fmt) == -1)
@@ -122,10 +123,11 @@ void VideoCapture::init_device()
         if (xioctl(fd, VIDIOC_G_FMT, &fmt) == -1)
             errno_exit("VIDIOC_G_FMT");
     }
+    /*
     std::cout << fmt.fmt.pix.width << std::endl;
     std::cout << fmt.fmt.pix.height << std::endl;
     std::cout << fmt.fmt.pix.pixelformat << std::endl;
-
+    */
     init_mmap();
 }
 
@@ -184,6 +186,11 @@ void VideoCapture::init_mmap()
 
 void VideoCapture::uninit_device()
 {
+    enum v4l2_buf_type type;
+    type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        if (xioctl(fd, VIDIOC_STREAMOFF, &type) == -1)
+            errno_exit("VIDIOC_STREAMOFF");
+
     unsigned int i;
 
     for (i = 0; i < n_buffers; ++i)
@@ -214,7 +221,7 @@ void VideoCapture::start_capturing()
         errno_exit("VIDIOC_STREAMON");
 }
 
-void VideoCapture::mainloop()
+int VideoCapture::read(cv::Mat *frame)
 {
     for (;;) {
         fd_set fds; // Bit string of file descriptors.
@@ -242,12 +249,13 @@ void VideoCapture::mainloop()
             exit(EXIT_FAILURE);
         }
 
-        if (read_frame())
+        if (process_frame(frame))
             break;
     }
+    return (!frame->empty());
 }
 
-int VideoCapture::read_frame()
+int VideoCapture::process_frame(cv::Mat *frame)
 {
     struct v4l2_buffer buf;
     CLEAR(buf);
@@ -266,32 +274,11 @@ int VideoCapture::read_frame()
 
     assert(buf.index < n_buffers);
 
-    process_image(buffers[buf.index].start, buf.bytesused);
+    // Write buffer data into opencv mat.
+    frame->data = static_cast<uchar*>(buffers[buf.index].start);
 
     if (-1 == xioctl(fd, VIDIOC_QBUF, &buf))
             errno_exit("VIDIOC_QBUF");
 
     return 1;
-}
-
-void VideoCapture::process_image(void *p, int size)
-{
-    char filename[15];
-    int frame_number = 0;
-
-    sprintf(filename, "frame-%d.raw", frame_number);
-    FILE *fp = fopen(filename, "wb");
-
-    fwrite(p, size, 1, fp);
-
-    fflush(fp);
-    fclose(fp);
-
-    int bitSize = size*8;
-    cv::Mat rawData(1, bitSize, CV_8UC1, p);
-    cv::Mat decodedImage = cv::imdecode(rawData, 1);
-    cv::imwrite("TEST_CV.jpg", decodedImage);
-    if (decodedImage.data == NULL)
-        std::cout << "DECODING ERROR" << std::endl;
-
 }

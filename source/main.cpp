@@ -1,19 +1,31 @@
-#include <VideoCap.h>
+#include <VideoCap.hpp>
 
 using namespace std;
 
-int main()
+void capture(cv::Mat *frame)
 {
-    cv::Mat image(480, 640, CV_8U);
-    VideoCapture vc = VideoCapture();
+    int ret;
+    for (;;) {
+        m.lock();
+        ret = cap.read(frame);
+        m.unlock();
+    }
+}
 
-    for (int i = 0; i < 10; i++)
-    vc.mainloop();
+int main(int argc, char *argv[])
+{
+    cv::Mat frame(480, 1280, CV_8U);
+    std::thread thread1;
+    std::mutex m;
+    VideoCapture cap;
 
-    vc.release();
+    Gtk::Main app(0, NULL);
+    Gtk::Window Win0;
 
-    //cv::imwrite("test.jpg", image);
+    Win0.show_all();
+    Gtk::Main::run(Win0);
 
-    cout << "Hello world!" << endl;
+
+
     return 0;
 }
