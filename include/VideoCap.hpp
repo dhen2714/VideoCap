@@ -3,6 +3,8 @@ VidoeCapture class to grab frames from a USB camera.
 To initialize a VideoCapture object:
     vc = VideoCapture()
 To grab a frame, call vc.read(). To release capture, vc.release().
+
+David Henry 2018
 */
 #ifndef VIDEO_CAP_H
 #define VIDEO_CAP_H
@@ -11,6 +13,7 @@ To grab a frame, call vc.read(). To release capture, vc.release().
 #include <cstdlib>
 #include <cstring>
 #include <cassert>
+#include <ctime>
 
 extern "C" {
 #include <getopt.h>
@@ -30,11 +33,8 @@ extern "C" {
 #include <iostream>
 #include <thread>
 #include <atomic>
-#include <mutex>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
-#include <gtkmm-3.0/gtkmm.h>
-#include <gdk/gdk.h>
 
 #define CLEAR(x) memset(&(x), 0, sizeof(x))
 
@@ -81,29 +81,19 @@ public:
     void release();
 };
 
-class Interface : public Gtk::Window
-{
-private:
-    void on_button_clicked();
-    Gtk::Button start;
-
-public:
-    Interface();
-    virtual ~Interface();
-};
-
 class CaptureApplication
 {
 private:
     VideoCapture vc;
-    //Interface gui;
     std::thread captureThread;
-    std::thread guiThread;
-    std::atomic_bool writeImg;
+    std::atomic_bool writeImg; // Switch for writing frames to disk.
+    std::atomic_bool captureOn; // Video capture switch.
     cv::Mat frame = cv::Mat(480, 1280, CV_8U);
 
     void run_capture();
-    void run_interface();
+    void parse_command();
+    void print_timestamp();
+    void write_image(cv::Mat *image);
 
 public:
     CaptureApplication();

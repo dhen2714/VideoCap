@@ -111,7 +111,7 @@ void VideoCapture::init_device()
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     std::cout << "FORCE FORMAT: " << force_format << std::endl;
     if (force_format) {
-        fprintf(stderr, "SET OV580\r\n");
+        fprintf(stderr, "SET PARAMETERS FOR OV580\r\n");
         fmt.fmt.pix.width = 1280;
         fmt.fmt.pix.height = 480;
         fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_GREY;
@@ -262,6 +262,8 @@ int VideoCapture::process_frame(cv::Mat *frame)
 
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     buf.memory = V4L2_MEMORY_MMAP;
+
+
 
     if (xioctl(fd, VIDIOC_DQBUF, &buf) == -1) {
         switch (errno) {
