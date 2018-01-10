@@ -14,6 +14,7 @@ David Henry 2018
 #include <cstring>
 #include <cassert>
 #include <ctime>
+#include <cctype>
 
 extern "C" {
 #include <getopt.h>
@@ -52,33 +53,55 @@ enum io_method {
 
 class VideoCapture{
 private:
-    const char *dev_name;
-    const enum io_method io = IO_METHOD_MMAP;
+    const char *dev_name; // /dev/videoX
+    const enum io_method io = IO_METHOD_MMAP; // Memory mapping.
     int fd = -1;
     buffer *buffers;
     unsigned int n_buffers;
     int out_buf;
     int force_format = 1; // If set != 0, img format specified in init_device()
-    int frame_count = 200;
-    unsigned int frame_number = 0;
+    int fps = 100; // Defaults at 100 fps.
 
     void errno_exit(const char *s);
     int xioctl(int fh, int request, void *arg);
 
-    void open_device();
-    void init_device();
-    void init_mmap();
-    void start_capturing();
-    int process_frame(cv::Mat *frame);
-    void stop_capturing();
-    void uninit_device();
-    void close_device();
+    void open_device(); // Open call on file descriptor.
+    void init_device(); // Sets video capture format, fps, calls init_mmap().
+    void init_mmap(); // Initiates memory mapping.
+    void start_capturing(); // Starts capture.
+    int process_frame(cv::Mat *frame); // Reads buffer into frame.
+    void uninit_device(); // Unitiates memory map.
+    void close_device(); // Closes device.
+    void switch_fps(); // Fps value switch, called by capture() if needed.
 
 public:
     VideoCapture();
-
+    /*
+    On initialization, dev_name is set to "/dev/video0",
+        open_device();
+        init_device();
+        start_capturing();
+    */
     int read(cv::Mat *frame);
+    /*
+    Reads buffer into input frame.
+    */
     void release();
+    /*
+    Releases the video capture.
+        cv::destroyAllWindows;
+        uninit_device();
+        close_device();
+    */
+    void capture(bool fpsSwitch = false);
+    /*
+    Run this after release() has been called to re-initiate capture. If
+    fpsSwitch is true, then the fps is also switched (between 100 and 60).
+        open_device();
+        init_device();
+        start_capturing();
+    */
+    int get_fps(); // Returns fps value.
 };
 
 class CaptureApplication
@@ -86,14 +109,23 @@ class CaptureApplication
 private:
     VideoCapture vc;
     std::thread captureThread;
-    std::atomic_bool writeImg; // Switch for writing frames to disk.
+    std::atomic_bool writeContinuous; // Switch for writing frames to disk.
+    std::atomic_bool writeSingles; // Switch for writing given amount of frames.
+    std::atomic_bool writing; // Write status.
     std::atomic_bool captureOn; // Video capture switch.
+    std::atomic_ulong writeCount; // Number of frames written to disk.
+    std::atomic_uint additionalFrames; // User specified number of frames.
     cv::Mat frame = cv::Mat(480, 1280, CV_8U);
 
-    void run_capture();
+    void run_capture(); // Loops through Videocapture.read() calls.
     void parse_command();
     void print_timestamp();
-    void write_image(cv::Mat *image);
+    void write_image(cv::Mat *image); // Write current frame to disk.
+    void update_write_status(); // Updates the write status.
+    void get_write_status();
+    bool numeric_command(const std::string *command); // Checks if input is num.
+    unsigned int str2int(const std::string *command); // Converts str to int.
+
 
 public:
     CaptureApplication();

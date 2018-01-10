@@ -4,8 +4,16 @@
 VideoCapture::VideoCapture()
 {
     dev_name = "/dev/video0";
-    std::cout << "DEFAULT" << std::endl;
     open_device();
+    init_device();
+    start_capturing();
+}
+
+void VideoCapture::capture(bool fpsSwitch)
+{
+    open_device();
+    if (fpsSwitch)
+        switch_fps();
     init_device();
     start_capturing();
 }
@@ -109,9 +117,9 @@ void VideoCapture::init_device()
     CLEAR(fmt);
     // The settings below are for a LI OV-580 OV7251 stereo camera.
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    std::cout << "FORCE FORMAT: " << force_format << std::endl;
+    //std::cout << "FORCE FORMAT: " << force_format << std::endl;
     if (force_format) {
-        fprintf(stderr, "SET PARAMETERS FOR OV580\r\n");
+        // fprintf(stderr, "SET PARAMETERS FOR OV580\r\n");
         fmt.fmt.pix.width = 1280;
         fmt.fmt.pix.height = 480;
         fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_GREY;
@@ -122,6 +130,15 @@ void VideoCapture::init_device()
     } else {
         if (xioctl(fd, VIDIOC_G_FMT, &fmt) == -1)
             errno_exit("VIDIOC_G_FMT");
+    }
+    struct v4l2_streamparm parm;
+
+    parm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    parm.parm.capture.timeperframe.numerator = 1;
+    parm.parm.capture.timeperframe.denominator = fps;
+
+    if (-1 == xioctl(fd, VIDIOC_S_PARM, &parm)) {
+        errno_exit("VIDIOC_S_PARM");
     }
     /*
     std::cout << fmt.fmt.pix.width << std::endl;
@@ -284,3 +301,15 @@ int VideoCapture::process_frame(cv::Mat *frame)
 
     return 1;
 }
+
+void VideoCapture::switch_fps()
+{
+    if (fps == 60) {
+        fps = 100;
+    } else if (fps == 100) {
+        fps = 60;
+    }
+    std::cout << "FPS set to " << fps << std::endl;
+}
+
+int VideoCapture::get_fps() {return fps;}
