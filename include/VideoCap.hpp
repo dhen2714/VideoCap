@@ -1,10 +1,15 @@
 /*
-VidoeCapture class to grab frames from a USB camera.
+Capture application and VideoCapture object for displaying and writing frames
+from Leopard OV-580 stereo camera. Commands can be entered via the command
+line after the application starts.
+
+Capture Application initializes video capture device with address /dev/video0.
+
 To initialize a VideoCapture object:
     vc = VideoCapture()
 To grab a frame, call vc.read(). To release capture, vc.release().
 
-David Henry 2018
+    - David Henry 2018
 */
 #ifndef VIDEO_CAP_H
 #define VIDEO_CAP_H
