@@ -109,6 +109,13 @@ public:
     int get_fps(); // Returns fps value.
 };
 
+class Frame
+{
+public:
+    cv::Mat img = cv::Mat(480, 1280, CV_8U);
+    struct timeval timestamp;
+};
+
 class CaptureApplication
 {
 private:

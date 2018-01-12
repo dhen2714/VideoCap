@@ -27,6 +27,7 @@ void VideoCapture::release()
 
 void VideoCapture::errno_exit(const char *s)
 {
+    //errno is number of last error.
     fprintf(stderr, "%s error %d, %s\n", s, errno, strerror(errno));
     exit(EXIT_FAILURE);
 }
@@ -89,7 +90,6 @@ void VideoCapture::init_device()
             errno_exit("VIDIOC_QUERYCAP");
         }
     }
-
     if (!(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE)) {
         fprintf(stderr, "%s is no video capture device \n",
                 dev_name);
@@ -257,7 +257,7 @@ int VideoCapture::read(cv::Mat *frame)
         r = select(fd + 1, &fds, NULL, NULL, &tv);
 
         if (r == -1) {
-            if (errno == EINTR)
+            if (errno == EINTR) // Interrupted system call.
                 continue;
             errno_exit("select");
         }
@@ -265,11 +265,10 @@ int VideoCapture::read(cv::Mat *frame)
             fprintf(stderr, "select timeout \n");
             exit(EXIT_FAILURE);
         }
-
         if (process_frame(frame))
             break;
     }
-    return (!frame->empty());
+    return !(frame->data == NULL);
 }
 
 int VideoCapture::process_frame(cv::Mat *frame)
@@ -280,19 +279,23 @@ int VideoCapture::process_frame(cv::Mat *frame)
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     buf.memory = V4L2_MEMORY_MMAP;
 
-
-
     if (xioctl(fd, VIDIOC_DQBUF, &buf) == -1) {
         switch (errno) {
-        case EAGAIN:
+        case EAGAIN: //Resource temporarily unavailable.
             return 0;
         default:
             errno_exit("VIDIOC_DQBUF");
         }
     }
-
     assert(buf.index < n_buffers);
 
+    if (buf.flags & V4L2_BUF_FLAG_ERROR)
+        std::cout << "BUFF FLAG ERROR" << std::endl;
+    /*
+    // Output timestamps, when first data byte was captured.
+    struct timeval tv = buf.timestamp;
+    std::cout << tv.tv_sec << "." << tv.tv_usec << std::endl;
+    */
     // Write buffer data into opencv mat.
     frame->data = static_cast<uchar*>(buffers[buf.index].start);
 

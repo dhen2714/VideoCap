@@ -87,6 +87,7 @@ void CaptureApplication::run_capture()
 {
     int ret;
     while (captureOn) {
+        frame.data == NULL;
         ret = vc.read(&frame);
         if (ret) {
             if (writeContinuous) {
@@ -103,6 +104,8 @@ void CaptureApplication::run_capture()
             }
             cv::imshow("Frame", frame);
             cv::waitKey(1);
+        } else {
+            std::cout << "Dropped frame!" << std::endl;
         }
     }
 }
@@ -120,6 +123,7 @@ void CaptureApplication::write_image(cv::Mat *image)
     fName = static_cast<std::string>(timestamp) +
             std::to_string(tv.tv_usec) + ".pgm";
     cv::imwrite(fName, frame);
+    //std::cout << fName << std::endl;
 }
 
 void CaptureApplication::print_timestamp()
