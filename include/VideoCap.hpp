@@ -133,6 +133,7 @@ private:
     void parse_command();
     void print_timestamp();
     void write_image(cv::Mat *image); // Write current frame to disk.
+    void write_image_raw(cv::Mat *image);
     void update_write_status(); // Updates the write status.
     void get_write_status();
     bool numeric_command(const std::string *command); // Checks if input is num.

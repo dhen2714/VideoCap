@@ -95,7 +95,7 @@ void CaptureApplication::run_capture()
                 writeCount += 1;
             } else if (writeSingles) {
                 if (additionalFrames > 0) {
-                    write_image(&frame);
+                    write_image_raw(&frame);
                     writeCount += 1;
                     --additionalFrames;
                 } else {
@@ -124,6 +124,30 @@ void CaptureApplication::write_image(cv::Mat *image)
             std::to_string(tv.tv_usec) + ".pgm";
     cv::imwrite(fName, frame);
     //std::cout << fName << std::endl;
+}
+
+void CaptureApplication::write_image_raw(cv::Mat *image)
+{
+    // Writing raw images rather than pgm does not prevent dropouts.
+    char timestamp[30];
+    struct timeval tv;
+    time_t curtime;
+    char fileName[36];
+    //std::string fName;
+
+    gettimeofday(&tv, NULL);
+    curtime = tv.tv_sec;
+    strftime(timestamp, 30,"%m-%d-%Y_%T.",localtime(&curtime));
+    sprintf(fileName, "%s%ld",timestamp,tv.tv_usec);
+    /*fName = static_cast<std::string>(timestamp) +
+            std::to_string(tv.tv_usec) + ".pgm"; */
+
+    FILE *fp = fopen(fileName, "wb");
+    int frameSize = image->total() * image->elemSize();
+    fwrite(image->data, frameSize, 1, fp);
+
+    fflush(fp);
+    fclose(fp);
 }
 
 void CaptureApplication::print_timestamp()
