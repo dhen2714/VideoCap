@@ -289,13 +289,13 @@ int VideoCapture::process_frame(cv::Mat *frame)
     }
     assert(buf.index < n_buffers);
 
-    if (buf.flags & V4L2_BUF_FLAG_ERROR)
-        std::cout << "BUFF FLAG ERROR" << std::endl;
-    /*
+    // if (buf.flags & V4L2_BUF_FLAG_ERROR)
+    //     std::cout << "BUFF FLAG ERROR" << std::endl;
+
     // Output timestamps, when first data byte was captured.
-    struct timeval tv = buf.timestamp;
-    std::cout << tv.tv_sec << "." << tv.tv_usec << std::endl;
-    */
+    // struct timeval tv = buf.timestamp;
+    // std::cout << tv.tv_sec << "." << tv.tv_usec << std::endl;
+
     // Write buffer data into opencv mat.
     frame->data = static_cast<uchar*>(buffers[buf.index].start);
 

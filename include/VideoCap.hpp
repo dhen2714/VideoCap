@@ -152,6 +152,12 @@ public:
 
     void pop_back(value_type* frameCopy);
 
+    void clear_buffer() { m_container.clear(); m_unread = 0;}
+
+    void clear_consumer();
+
+    void clear_producer();
+
 private:
     // Disabled copy constructor.
     bounded_buffer(const bounded_buffer&);
@@ -182,7 +188,7 @@ private:
     std::atomic_ulong writeCount; // Number of frames written to disk.
     std::atomic_uint additionalFrames; // User specified number of frames.
     cv::Mat frame; // OpenCV Mat object which camera buffer is read to.
-    const unsigned int cap_app_size = 500; // Capacity of circular buffer.
+    const unsigned int cap_app_size = 500; // Frame capacity of circular buffer.
 
     void run_capture(); // Loops through Videocapture.read() calls.
     void parse_command();

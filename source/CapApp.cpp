@@ -27,6 +27,7 @@ frame(cv::Mat(480, 1280, CV_8U))
     std::cout << "..." << std::endl;
     writeThread.join();
     std::cout << "..." << std::endl;
+    CapAppBuffer->clear_buffer();
 }
 
 CaptureApplication::~CaptureApplication()
@@ -96,6 +97,7 @@ void CaptureApplication::parse_command()
         captureOn = false;
         readThread.join();
         writeThread.join();
+        CapAppBuffer->clear_buffer();
         vc.release();
         vc.capture(true);
         captureOn = true;
@@ -121,6 +123,7 @@ void CaptureApplication::read_frames()
         }
     }
     cv::destroyAllWindows();
+    CapAppBuffer->clear_consumer();
 }
 
 void CaptureApplication::write_frames()
@@ -144,6 +147,7 @@ void CaptureApplication::write_frames()
             }
         }
     }
+    CapAppBuffer->clear_producer();
 }
 
 void CaptureApplication::run_capture()
@@ -250,5 +254,17 @@ void bounded_buffer::pop_back(value_type* frameCopy)
     m_not_empty.wait(lock, boost::bind(&bounded_buffer::is_not_empty, this));
     *frameCopy = m_container[--m_unread];
     lock.unlock();
+    m_not_full.notify_one();
+}
+
+void bounded_buffer::clear_consumer()
+{
+    ++m_unread;
+    m_not_empty.notify_one();
+}
+
+void bounded_buffer::clear_producer()
+{
+    m_unread = m_container.capacity() - 1;
     m_not_full.notify_one();
 }
