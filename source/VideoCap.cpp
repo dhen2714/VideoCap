@@ -305,6 +305,75 @@ int VideoCapture::process_frame(cv::Mat *frame)
     return 1;
 }
 
+int VideoCapture::read(Frame &frame)
+{
+    for (;;) {
+        fd_set fds; // Bit string of file descriptors.
+        struct timeval tv;
+        int r;
+
+        FD_ZERO(&fds); // Initializes file descriptor set &fds to be zero.
+        FD_SET(fd, &fds); // Sets bit for file descriptor fd in &fds.
+
+        tv.tv_sec = 2;
+        tv.tv_usec = 0;
+
+        /* The select() function indicates which of the specified file
+        descriptors is ready for reading, ready for writing, or  has an error
+        condition pending. */
+        r = select(fd + 1, &fds, NULL, NULL, &tv);
+
+        if (r == -1) {
+            if (errno == EINTR) // Interrupted system call.
+                continue;
+            errno_exit("select");
+        }
+        if (r == 0) {
+            fprintf(stderr, "select timeout \n");
+            exit(EXIT_FAILURE);
+        }
+        if (process_frame(frame))
+            break;
+    }
+    return 1;
+}
+
+int VideoCapture::process_frame(Frame &frame)
+{
+    struct v4l2_buffer buf;
+    frame.clear();
+    CLEAR(buf);
+
+    buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    buf.memory = V4L2_MEMORY_MMAP;
+
+    if (xioctl(fd, VIDIOC_DQBUF, &buf) == -1) {
+        switch (errno) {
+        case EAGAIN: //Resource temporarily unavailable.
+            return 0;
+        default:
+            errno_exit("VIDIOC_DQBUF");
+        }
+    }
+    assert(buf.index < n_buffers);
+
+    // if (buf.flags & V4L2_BUF_FLAG_ERROR)
+    //     std::cout << "BUFF FLAG ERROR" << std::endl;
+
+    // Output timestamps, when first data byte was captured.
+    // struct timeval tv = buf.timestamp;
+    // std::cout << tv.tv_sec << "." << tv.tv_usec << std::endl;
+
+    // Write buffer data into opencv mat.
+    frame.image.data = static_cast<uchar*>(buffers[buf.index].start);
+    frame.timestamp = buf.timestamp;
+
+    if (-1 == xioctl(fd, VIDIOC_QBUF, &buf))
+            errno_exit("VIDIOC_QBUF");
+
+    return 1;
+}
+
 void VideoCapture::switch_fps()
 {
     if (fps == 60) {

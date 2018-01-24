@@ -1,8 +1,7 @@
 #include <VideoCap.hpp>
 
 CaptureApplication::CaptureApplication()
-: writeContinuous(false), writeSingles(false), captureOn(true), writeCount(0),
-frame(cv::Mat(480, 1280, CV_8U))
+: writeContinuous(false), writeSingles(false), captureOn(true), writeCount(0)
 {
     // Print out current fps.
     std::cout << "FPS: " << vc.get_fps() << std::endl;
@@ -114,11 +113,10 @@ void CaptureApplication::read_frames()
     int ret;
     while (captureOn)
     {
-        frame.data == nullptr;
-        ret = vc.read(&frame);
+        ret = vc.read(frame);
         if (ret) {
             CapAppBuffer->push_front(frame); // writes to front of buffer
-            cv::imshow("Frame", frame);
+            cv::imshow("Frame", frame.image);
             cv::waitKey(1);
         }
     }
@@ -129,16 +127,17 @@ void CaptureApplication::read_frames()
 void CaptureApplication::write_frames()
 {
     // Mat objects held in buffer are written to frameCopy.
-    cv::Mat frameCopy(480, 1280, CV_8U);
+    //cv::Mat frameCopy(480, 1280, CV_8U);
+    Frame frameCopy;
     while (captureOn)
     {
-        CapAppBuffer->pop_back(&frameCopy);
+        CapAppBuffer->pop_back(frameCopy);
         if (writeContinuous) {
-            write_image(&frameCopy);
+            write_image(frameCopy);
             writeCount += 1;
         } else if (writeSingles) {
             if (additionalFrames > 0) {
-                write_image(&frameCopy);
+                write_image(frameCopy);
                 writeCount += 1;
                 --additionalFrames;
             } else {
@@ -149,7 +148,7 @@ void CaptureApplication::write_frames()
     }
     CapAppBuffer->clear_producer();
 }
-
+/*
 void CaptureApplication::run_capture()
 {
     // This is the old method in which read and write calls were on the
@@ -181,6 +180,18 @@ void CaptureApplication::run_capture()
         }
     }
 }
+*/
+void CaptureApplication::write_image(Frame &frame)
+{
+    struct timeval tv;
+    std::string fName;
+    long ts;
+
+    tv = frame.timestamp;
+    ts = tv.tv_sec*1e6 + tv.tv_usec;
+    fName = std::to_string(ts) + ".pgm";
+    cv::imwrite(fName, frame.image);
+}
 
 void CaptureApplication::write_image(cv::Mat *image)
 {
@@ -194,7 +205,7 @@ void CaptureApplication::write_image(cv::Mat *image)
     strftime(timestamp, 30,"%m-%d-%Y_%T.",localtime(&curtime));
     fName = static_cast<std::string>(timestamp) +
             std::to_string(tv.tv_usec) + ".pgm";
-    cv::imwrite(fName, frame);
+    cv::imwrite(fName, *image);
     //std::cout << fName << std::endl;
 }
 
@@ -248,6 +259,15 @@ void bounded_buffer::push_front(
     m_not_empty.notify_one();
 }
 
+void bounded_buffer::pop_back(value_type &frameCopy)
+{
+    boost::mutex::scoped_lock lock(m_mutex);
+    m_not_empty.wait(lock, boost::bind(&bounded_buffer::is_not_empty, this));
+    frameCopy = m_container[--m_unread];
+    lock.unlock();
+    m_not_full.notify_one();
+}
+
 void bounded_buffer::pop_back(value_type* frameCopy)
 {
     boost::mutex::scoped_lock lock(m_mutex);
@@ -267,4 +287,11 @@ void bounded_buffer::clear_producer()
 {
     m_unread = m_container.capacity() - 1;
     m_not_full.notify_one();
+}
+
+void Frame::clear()
+{
+    image.data = nullptr;
+    timestamp.tv_sec = 0L;
+    timestamp.tv_usec = 0L;
 }

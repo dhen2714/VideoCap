@@ -3,7 +3,7 @@ Capture application and VideoCapture object for displaying and writing frames
 from Leopard OV-580 stereo camera. Commands can be entered via the command
 line after the application starts. Commands are:
     start - Starts writing frames continuously to disk.
-    'n'   - Where 'n' is an integer; writes 'n' frames to disk.
+    n     - Where 'n' is an integer; writes 'n' frames to disk.
     stop  - Stops writing. Can be used after one of the previous two commands
             are called.
     q     - Quits application.
@@ -44,6 +44,7 @@ extern "C" {
 #include <iostream>
 #include <thread>
 #include <atomic>
+
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 
@@ -55,6 +56,16 @@ extern "C" {
 #include <boost/bind.hpp>
 
 #define CLEAR(x) memset(&(x), 0, sizeof(x))
+
+class Frame
+{
+public:
+    cv::Mat image;
+    struct timeval timestamp;
+
+    Frame() : image(cv::Mat(480, 1280, CV_8U)) {};
+    void clear();
+};
 
 class buffer {
 public:
@@ -87,6 +98,7 @@ private:
     void init_mmap(); // Initiates memory mapping.
     void start_capturing(); // Starts capture, queues buffers.
     int process_frame(cv::Mat *frame); // Reads buffer into frame.
+    int process_frame(Frame &frame);
     void uninit_device(); // Unitiates memory map.
     void close_device(); // Closes device.
     void switch_fps(); // Fps value switch, called by capture() if needed.
@@ -100,6 +112,7 @@ public:
         start_capturing();
     */
     int read(cv::Mat *frame);
+    int read(Frame &frame);
     /*
     Reads buffer into input frame.
     */
@@ -121,13 +134,6 @@ public:
     int get_fps(); // Returns fps value.
 };
 
-class Frame
-{
-public:
-    cv::Mat img = cv::Mat(480, 1280, CV_8U);
-    struct timeval timestamp;
-};
-
 class bounded_buffer
 /*
 Thread-safe implementation of circular buffer, ensuring mutual exclusion
@@ -140,7 +146,7 @@ http://www.boost.org/doc/libs/master/libs/circular_buffer/example/circular_buffe
 */
 {
 public:
-    typedef boost::circular_buffer<cv::Mat> container_type;
+    typedef boost::circular_buffer<Frame> container_type;
     typedef typename container_type::size_type size_type;
     typedef typename container_type::value_type value_type;
     typedef typename boost::call_traits<value_type>::param_type param_type;
@@ -149,13 +155,11 @@ public:
     : m_unread(0), m_container(capacity) {}
 
     void push_front(typename boost::call_traits<value_type>::param_type item);
-
     void pop_back(value_type* frameCopy);
+    void pop_back(value_type &frameCopy);
 
     void clear_buffer() { m_container.clear(); m_unread = 0;}
-
     void clear_consumer();
-
     void clear_producer();
 
 private:
@@ -187,12 +191,14 @@ private:
     std::atomic_bool captureOn; // Video capture switch.
     std::atomic_ulong writeCount; // Number of frames written to disk.
     std::atomic_uint additionalFrames; // User specified number of frames.
-    cv::Mat frame; // OpenCV Mat object which camera buffer is read to.
+    //cv::Mat frame; // OpenCV Mat object which camera buffer is read to.
+    Frame frame;
     const unsigned int cap_app_size = 500; // Frame capacity of circular buffer.
 
     void run_capture(); // Loops through Videocapture.read() calls.
     void parse_command();
     void print_timestamp();
+    void write_image(Frame &frame);
     void write_image(cv::Mat *image); // Write current frame to disk.
     void write_image_raw(cv::Mat *image);
     void update_write_status(); // Updates the write status.
