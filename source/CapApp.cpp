@@ -189,7 +189,7 @@ void CaptureApplication::write_image(Frame &frame)
 
     tv = frame.timestamp;
     ts = tv.tv_sec*1e6 + tv.tv_usec;
-    fName = std::to_string(ts) + ".pgm";
+    fName = std::to_string(ts) + "_" + std::to_string(this->writeCount) + ".pgm";
     cv::imwrite(fName, frame.image);
 }
 
