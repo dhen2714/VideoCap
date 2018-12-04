@@ -63,7 +63,7 @@ public:
     cv::Mat image;
     struct timeval timestamp;
 
-    Frame() : image(cv::Mat(480, 1280, CV_8U)) {};
+    Frame() : image(cv::Mat(480, 640, CV_8U)) {};
     void clear();
 };
 

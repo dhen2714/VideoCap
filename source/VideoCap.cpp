@@ -120,9 +120,9 @@ void VideoCapture::init_device()
     //std::cout << "FORCE FORMAT: " << force_format << std::endl;
     if (force_format) {
         // fprintf(stderr, "SET PARAMETERS FOR OV580\r\n");
-        fmt.fmt.pix.width = 1280;
+        fmt.fmt.pix.width = 640;
         fmt.fmt.pix.height = 480;
-        fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_GREY;
+        fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
         fmt.fmt.pix.field = V4L2_FIELD_ANY;
 
         if (xioctl(fd, VIDIOC_S_FMT, &fmt) == -1)
@@ -131,6 +131,15 @@ void VideoCapture::init_device()
         if (xioctl(fd, VIDIOC_G_FMT, &fmt) == -1)
             errno_exit("VIDIOC_G_FMT");
     }
+
+    // Set exposure
+    struct v4l2_control control;
+    control.id = V4L2_CID_EXPOSURE_ABSOLUTE;
+    control.value = 510;
+
+    if (-1 == xioctl(fd, VIDIOC_S_CTRL, &control))
+        errno_exit("VIDIOC_S_CTRL");
+
     struct v4l2_streamparm parm;
 
     parm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -297,7 +306,28 @@ int VideoCapture::process_frame(cv::Mat *frame)
     // std::cout << tv.tv_sec << "." << tv.tv_usec << std::endl;
 
     // Write buffer data into opencv mat.
-    frame->data = static_cast<uchar*>(buffers[buf.index].start);
+    unsigned char* buffer_data;
+    unsigned char* processed_buffer;
+
+    buffer_data = static_cast<uchar*>(buffers[buf.index].start);
+    processed_buffer = static_cast<uchar*>(malloc(sizeof(uchar) * 640 * 480));
+
+    uint16_t raw_pix_val;
+    uint8_t processed_pix_val;
+    unsigned char word1, word2;
+
+    for (int i = 0; i < 640 * 480; i++) {
+        word1 = buffer_data[2 * i];
+        word2 = buffer_data[2 * i + 1];
+
+        raw_pix_val = (word2 << 8) | word1;
+        processed_pix_val = static_cast<uint8_t>((255.0/1023.0) * static_cast<float>(raw_pix_val));
+
+        processed_buffer[i] = processed_pix_val;
+    }
+
+    // frame->data = static_cast<uchar*>(buffers[buf.index].start);
+    frame->data = processed_buffer;
 
     if (-1 == xioctl(fd, VIDIOC_QBUF, &buf))
             errno_exit("VIDIOC_QBUF");
@@ -365,7 +395,29 @@ int VideoCapture::process_frame(Frame &frame)
     // std::cout << tv.tv_sec << "." << tv.tv_usec << std::endl;
 
     // Write buffer data into opencv mat.
-    frame.image.data = static_cast<uchar*>(buffers[buf.index].start);
+    // Also resamples 10 bit raw data into an 8 bit image for the MIPI tester.
+    unsigned char* buffer_data;
+    unsigned char* processed_buffer;
+
+    buffer_data = static_cast<uchar*>(buffers[buf.index].start);
+    processed_buffer = static_cast<uchar*>(malloc(sizeof(uchar) * 640 * 480));
+
+    uint16_t raw_pix_val;
+    uint8_t processed_pix_val;
+    unsigned char word1, word2;
+
+    for (int i = 0; i < 640 * 480; i++) {
+        word1 = buffer_data[2 * i];
+        word2 = buffer_data[2 * i + 1];
+
+        raw_pix_val = (word2 << 8) | word1;
+        processed_pix_val = static_cast<uint8_t>((255.0/1023.0) * static_cast<float>(raw_pix_val));
+
+        processed_buffer[i] = processed_pix_val;
+    }
+
+    // frame.image.data = static_cast<uchar*>(buffers[buf.index].start);
+    frame.image.data = processed_buffer;
     frame.timestamp = buf.timestamp;
 
     if (-1 == xioctl(fd, VIDIOC_QBUF, &buf))
