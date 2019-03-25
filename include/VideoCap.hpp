@@ -88,7 +88,7 @@ private:
     unsigned int n_buffers;
     int out_buf;
     int force_format = 1; // If set != 0, img format specified in init_device()
-    int fps = 100; // Defaults at 100 fps.
+    int fps = 60; // Defaults at 100 fps.
 
     void errno_exit(const char *s);
     int xioctl(int fh, int request, void *arg);
