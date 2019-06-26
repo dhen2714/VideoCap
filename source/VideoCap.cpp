@@ -437,3 +437,16 @@ void VideoCapture::switch_fps()
 }
 
 int VideoCapture::get_fps() {return fps;}
+
+int VideoCapture::set_exposure(int exposure)
+{
+    // Sets exposure level to desired value.
+    struct v4l2_control control;
+    control.id = V4L2_CID_EXPOSURE_ABSOLUTE;
+    control.value = exposure;
+
+    if (-1 == xioctl(fd, VIDIOC_S_CTRL, &control))
+        errno_exit("VIDIOC_S_CTRL");
+
+    return 1;
+}

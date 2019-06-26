@@ -102,6 +102,7 @@ private:
     void uninit_device(); // Unitiates memory map.
     void close_device(); // Closes device.
     void switch_fps(); // Fps value switch, called by capture() if needed.
+    int set_exposure(int exposure); // Sets exposure to desired value.
 
 public:
     VideoCapture();
