@@ -102,7 +102,6 @@ private:
     void uninit_device(); // Unitiates memory map.
     void close_device(); // Closes device.
     void switch_fps(); // Fps value switch, called by capture() if needed.
-    int set_exposure(int exposure); // Sets exposure to desired value.
 
 public:
     VideoCapture();
@@ -133,6 +132,7 @@ public:
         start_capturing();
     */
     int get_fps(); // Returns fps value.
+    int set_exposure(int exposure); // Sets exposure to desired value.
 };
 
 class bounded_buffer
@@ -192,6 +192,7 @@ private:
     std::atomic_bool captureOn; // Video capture switch.
     std::atomic_ulong writeCount; // Number of frames written to disk.
     std::atomic_uint additionalFrames; // User specified number of frames.
+    std::atomic_uint exposure; // User defined exposure.
     //cv::Mat frame; // OpenCV Mat object which camera buffer is read to.
     Frame frame;
     const unsigned int cap_app_size = 500; // Frame capacity of circular buffer.

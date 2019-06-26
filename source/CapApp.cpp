@@ -66,7 +66,8 @@ unsigned int CaptureApplication::str2int(const std::string *command)
 void CaptureApplication::parse_command()
 {
     std::string command;
-    std::cin >> command;
+    //std::cin >> command;
+    std::getline(std::cin, command);
     if (command == "q") {
         // Quit command.
         std::cout << "Quitting..." << std::endl;
@@ -92,6 +93,10 @@ void CaptureApplication::parse_command()
         writeSingles = true; update_write_status();
     } else if (numeric_command(&command) && writing) {
         std::cout << "Already writing!" << std::endl;
+    } else if (command.substr(0, command.find(" ")) == "exposure") {
+        exposure = std::stoi(command.substr(9)); // stoi - string to int
+        std::cout << "Setting exposure to " << exposure << std::endl;
+        vc.set_exposure(exposure);
     } else if (command == "fps") {
         captureOn = false;
         readThread.join();
