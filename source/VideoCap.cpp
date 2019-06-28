@@ -385,3 +385,11 @@ void VideoCapture::switch_fps()
 }
 
 int VideoCapture::get_fps() {return fps;}
+
+// Following code from https://lwn.net/Articles/399547/
+
+struct foo_dev 
+{
+    struct v4l2_device v4l2_dev;
+    struct v4l2_ctrl_handler ctrl_handler;
+}

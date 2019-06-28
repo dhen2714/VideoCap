@@ -39,6 +39,7 @@ extern "C" {
 #include <sys/ioctl.h>
 // V4L2 - video4linux
 #include <linux/videodev2.h>
+#include <media/v4l2-ctrls.h>
 }
 
 #include <iostream>
@@ -211,5 +212,53 @@ public:
     CaptureApplication();
     ~CaptureApplication();
 };
+
+// Following code from https://lwn.net/Articles/399547/
+
+struct foo_dev 
+{
+    struct v4l2_device v4l2_dev;
+    struct v4l2_ctrl_handler ctrl_handler;
+};
+
+struct foo_dev *foo;
+
+
+
+v4l2_ctrl_handler_init(&foo->ctrl_handler, 1);
+v4l2_ctrl_new_std(&foo->ctrl_handler, &foo_ctrl_ops, V4L2_CID_AUTOGAIN, 0, 1, 1, 128);
+
+if (foo->ctrl_handler.error) {
+        int err = foo->ctrl_handler.error;
+
+        v4l2_ctrl_handler_free(&foo->ctrl_handler);
+        return err;
+}
+
+
+foo->v4l2_dev.ctrl_handler = &foo->ctrl_handler;
+v4l2_ctrl_handler_free(&foo->ctrl_handler);
+
+static const struct v4l2_ctrl_ops foo_ctrl_ops = {
+        .s_ctrl = foo_s_ctrl,
+};
+
+
+static int foo_s_ctrl(struct v4l2_ctrl *ctrl)
+{
+        struct foo *state = container_of(ctrl->handler, struct foo, ctrl_handler);
+
+        switch (ctrl->id) {
+        case V4L2_CID_AUTOGAIN:
+                write_reg(0x80181033[3], ctrl->val);
+                write_reg(0x80181833[3], ctrl->val);
+                break;
+        }
+        return 0;
+}
+
+//V4L2_CID_AUTOGAIN (boolean)
+
+
 
 #endif // VIDEO_CAP_H
