@@ -1,5 +1,82 @@
 #include <VideoCap.hpp>
 
+#define CY_FX_UVC_XU_TRIGGER_ENABLE (0x00)
+
+#define read_length 0x20
+
+#define SAFE_IOCTL(x) {if(x<0) printf("ioctl error: %d\t%s\n",errno,strerror(errno));}
+
+static	__u8 query_value[384] = {0};
+//static	__u8 * data = (__u8 *)value;
+static  __u8 data_buf[256] = {0};
+
+static	__u8 *data = data_buf;
+
+static  __u32 v4l2_dev;
+
+static __u8 i2c_flag = 1; //true:i2c0;false:i2c1
+
+struct uvc_xu_control_query xu_query = {
+        .unit		= 4, //has to be unit 3
+		.selector	= 2, //TD
+		.query		= UVC_SET_CUR,
+		.size		= 384, //TD
+		.data		= query_value,
+    };
+// ISP - image signal processor; refers to ov580?
+void  VideoCapture::ISPRegister_Write(__u32 isp_add,__u8 isp_val)
+{
+
+    xu_query.query = UVC_SET_CUR;//UVC_GET_LEN UVC_GET_CUR
+    query_value[0] = 0x50;
+    query_value[1] = 0xa2;
+    query_value[2] = 0x6c;
+    query_value[3] = 0x04;
+    query_value[4] = 0x01;
+    //register address
+    query_value[5] = isp_add>>24;
+    query_value[6] = isp_add>>16;
+    query_value[7] = isp_add>>8;
+    query_value[8] = isp_add&0xff;
+
+    query_value[9] = 0x90;
+    query_value[10] = 0x01;
+    query_value[11] = 0x00;
+    query_value[12] = 0x01;
+
+    query_value[16] = isp_val;
+
+    SAFE_IOCTL(ioctl(fd, UVCIOC_CTRL_QUERY, &xu_query));
+}
+
+__u8 VideoCapture::ISPRegister_Read(__u32 isp_add)
+{
+
+    xu_query.query = UVC_SET_CUR;//UVC_GET_LEN UVC_GET_CUR
+    query_value[0] = 0x51;
+    query_value[1] = 0xa2;
+    query_value[2] = 0x6c;
+    query_value[3] = 0x04;
+    query_value[4] = 0x01;
+    query_value[5] = isp_add>>24;
+    query_value[6] = isp_add>>16;
+    query_value[7] = isp_add>>8;
+    query_value[8] = isp_add&0xff;
+    query_value[9] = 0x90;
+    query_value[10] = 0x01;
+    query_value[11] = 0x00;
+    query_value[12] = 0x01;
+
+    ioctl(fd, UVCIOC_CTRL_QUERY, &xu_query);
+    sleep(1);
+
+    xu_query.query = UVC_GET_CUR;//UVC_GET_LEN UVC_GET_CUR
+    SAFE_IOCTL(ioctl(fd, UVCIOC_CTRL_QUERY, &xu_query));
+
+
+    return query_value[17];
+}
+
 
 VideoCapture::VideoCapture()
 {
@@ -7,6 +84,10 @@ VideoCapture::VideoCapture()
     open_device();
     init_device();
     start_capturing();
+    printf("Test: 0x%x\n", ISPRegister_Read(0x80181033));
+    ISPRegister_Write(0x80181033, 0);
+    ISPRegister_Write(0x80181833, 0);
+    printf("Test: 0x%x\n", ISPRegister_Read(0x80181033));
 }
 
 void VideoCapture::capture(bool fpsSwitch)

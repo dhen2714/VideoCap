@@ -34,11 +34,15 @@ extern "C" {
 #include <errno.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <limits.h>
 #include <sys/time.h>
 #include <sys/mman.h>
 #include <sys/ioctl.h>
+#include <iconv.h>
 // V4L2 - video4linux
 #include <linux/videodev2.h>
+#include <linux/uvcvideo.h>
+#include <linux/usb/video.h>
 }
 
 #include <iostream>
@@ -56,6 +60,7 @@ extern "C" {
 #include <boost/bind.hpp>
 
 #define CLEAR(x) memset(&(x), 0, sizeof(x))
+
 
 class Frame
 {
@@ -102,6 +107,9 @@ private:
     void uninit_device(); // Unitiates memory map.
     void close_device(); // Closes device.
     void switch_fps(); // Fps value switch, called by capture() if needed.
+
+    __u8 ISPRegister_Read(__u32 isp_add);
+    void ISPRegister_Write(__u32 isp_add,__u8 isp_val);
 
 public:
     VideoCapture();
