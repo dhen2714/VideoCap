@@ -110,6 +110,8 @@ private:
 
     __u8 ISPRegister_Read(__u32 isp_add);
     void ISPRegister_Write(__u32 isp_add,__u8 isp_val);
+    __u8 SensorRegister_Read(__u16 sensor_add,__u8 i2c0);
+    void  SensorRegister_Write(__u16 sensor_add,__u8 sensor_val,__u8 i2c0);
 
 public:
     VideoCapture();

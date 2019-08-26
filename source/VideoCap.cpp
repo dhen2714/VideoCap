@@ -77,6 +77,70 @@ __u8 VideoCapture::ISPRegister_Read(__u32 isp_add)
     return query_value[17];
 }
 
+__u8 VideoCapture::SensorRegister_Read(__u16 sensor_add,__u8 i2c0)
+{
+
+    xu_query.query = UVC_SET_CUR;//UVC_GET_LEN UVC_GET_CUR
+    query_value[0] = 0x51;
+
+    if(i2c0)
+    query_value[1] = 0xa3;
+    else
+    query_value[1] = 0xa5;
+
+    query_value[2] = 0x6c;
+    query_value[3] = 0x02;
+    query_value[4] = 0x01;
+    query_value[5] = 0x00;
+    query_value[6] = 0x00;
+    query_value[7] = sensor_add>>8;
+    query_value[8] = sensor_add&0xff;
+    query_value[9] = 0x90;
+    query_value[10] = 0x01;
+    query_value[11] = 0x00;
+    query_value[12] = 0x01;
+
+    SAFE_IOCTL(ioctl(fd, UVCIOC_CTRL_QUERY, &xu_query));
+   // sleep(1);
+
+    xu_query.query = UVC_GET_CUR;//UVC_GET_LEN UVC_GET_CUR
+    SAFE_IOCTL(ioctl(fd, UVCIOC_CTRL_QUERY, &xu_query));
+
+
+    return query_value[17];
+}
+
+void VideoCapture::SensorRegister_Write(__u16 sensor_add,__u8 sensor_val,__u8 i2c0)
+{
+
+    xu_query.query = UVC_SET_CUR;//UVC_GET_LEN UVC_GET_CUR
+    query_value[0] = 0x50;
+
+    if(i2c0)
+    query_value[1] = 0xa3;
+    else
+    query_value[1] = 0xa5;
+
+    query_value[2] = 0x6c;
+    query_value[3] = 0x02;
+    query_value[4] = 0x01;
+
+    //register address
+    query_value[5] = 0x00;
+    query_value[6] = 0x00;
+    query_value[7] = sensor_add>>8;
+    query_value[8] = sensor_add&0xff;
+
+    query_value[9] = 0x90;
+    query_value[10] = 0x01;
+    query_value[11] = 0x00;
+    query_value[12] = 0x01;
+
+    query_value[16] = sensor_val;
+
+    SAFE_IOCTL(ioctl(fd, UVCIOC_CTRL_QUERY, &xu_query));
+
+}
 
 VideoCapture::VideoCapture()
 {
@@ -84,10 +148,15 @@ VideoCapture::VideoCapture()
     open_device();
     init_device();
     start_capturing();
-    printf("Test: 0x%x\n", ISPRegister_Read(0x80181033));
-    ISPRegister_Write(0x80181033, 0);
-    ISPRegister_Write(0x80181833, 0);
-    printf("Test: 0x%x\n", ISPRegister_Read(0x80181033));
+    // printf("Test: 0x%x\n", ISPRegister_Read(0x80181033));
+    // printf("Test: 0x%x\n", ISPRegister_Read(0x80181833));
+    // ISPRegister_Write(0x80181033, 0);
+    // ISPRegister_Write(0x80181833, 0);
+    // printf("Test: 0x%x\n", ISPRegister_Read(0x80181033));
+    // printf("Test: 0x%x\n", ISPRegister_Read(0x80181833));
+    printf("exp test: 0x%x\n", SensorRegister_Read(0x3501, 0x01));
+    SensorRegister_Write(0x3501, 0x1f, 0x01);
+    printf("exp test: 0x%x\n", SensorRegister_Read(0x3501, 0x01));
 }
 
 void VideoCapture::capture(bool fpsSwitch)
